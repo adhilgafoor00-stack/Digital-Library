@@ -156,12 +156,24 @@ public class MainApplication {
                 sendResponse(exchange, json.toString(), 200, "application/json");
             } else if ("POST".equals(method)) {
                 Map<String, String> data = parseFormData(getBody(exchange));
+                String id = data.get("id");
                 try (Connection con = DBConnection.getConnection()) {
-                    PreparedStatement pst = con.prepareStatement("INSERT INTO books (title, author, quantity) VALUES (?, ?, ?)");
-                    pst.setString(1, data.get("title"));
-                    pst.setString(2, data.get("author"));
-                    pst.setInt(3, Integer.parseInt(data.get("quantity")));
-                    pst.executeUpdate();
+                    if (id != null && !id.isEmpty()) {
+                        // UPDATE
+                        PreparedStatement pst = con.prepareStatement("UPDATE books SET title=?, author=?, quantity=? WHERE id=?");
+                        pst.setString(1, data.get("title"));
+                        pst.setString(2, data.get("author"));
+                        pst.setInt(3, Integer.parseInt(data.get("quantity")));
+                        pst.setInt(4, Integer.parseInt(id));
+                        pst.executeUpdate();
+                    } else {
+                        // INSERT
+                        PreparedStatement pst = con.prepareStatement("INSERT INTO books (title, author, quantity) VALUES (?, ?, ?)");
+                        pst.setString(1, data.get("title"));
+                        pst.setString(2, data.get("author"));
+                        pst.setInt(3, Integer.parseInt(data.get("quantity")));
+                        pst.executeUpdate();
+                    }
                     sendResponse(exchange, "Success", 200, "text/plain");
                 } catch (Exception e) {
                     sendResponse(exchange, "Error: " + e.getMessage(), 500, "text/plain");
@@ -192,11 +204,22 @@ public class MainApplication {
                 sendResponse(exchange, json.toString(), 200, "application/json");
             } else if ("POST".equals(method)) {
                 Map<String, String> data = parseFormData(getBody(exchange));
+                String id = data.get("id");
                 try (Connection con = DBConnection.getConnection()) {
-                    PreparedStatement pst = con.prepareStatement("INSERT INTO members (name, phone) VALUES (?, ?)");
-                    pst.setString(1, data.get("name"));
-                    pst.setString(2, data.get("phone"));
-                    pst.executeUpdate();
+                    if (id != null && !id.isEmpty()) {
+                        // UPDATE
+                        PreparedStatement pst = con.prepareStatement("UPDATE members SET name=?, phone=? WHERE id=?");
+                        pst.setString(1, data.get("name"));
+                        pst.setString(2, data.get("phone"));
+                        pst.setInt(3, Integer.parseInt(id));
+                        pst.executeUpdate();
+                    } else {
+                        // INSERT
+                        PreparedStatement pst = con.prepareStatement("INSERT INTO members (name, phone) VALUES (?, ?)");
+                        pst.setString(1, data.get("name"));
+                        pst.setString(2, data.get("phone"));
+                        pst.executeUpdate();
+                    }
                     sendResponse(exchange, "Success", 200, "text/plain");
                 } catch (Exception e) {
                     sendResponse(exchange, "Error: " + e.getMessage(), 500, "text/plain");

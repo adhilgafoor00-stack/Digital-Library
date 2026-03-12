@@ -37,7 +37,8 @@ public class UIQueries {
         "th, td { text-align: left; padding: 15px; border-bottom: 1px solid #eee; }" +
         "th { background: #f8f9fa; color: #777; font-weight: 600; text-transform: uppercase; font-size: 12px; }" +
         "input, select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin: 5px; }" +
-        ".btn-primary { background: var(--accent); color: #fff; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }";
+        ".btn-primary { background: var(--accent); color: #fff; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }" +
+        ".btn-edit { background: #f39c12; color: #fff; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }";
 
     public static String getLoginPage() {
         return "<html><head><style>" + CSS + "</style></head><body>" +
@@ -71,11 +72,11 @@ public class UIQueries {
                "    </div>" +
                "    <div id='books-section' class='section' style='display:none'>" +
                "      <div class='header'><h1>Books Inventory</h1><button class='btn-primary' onclick='openModal(\"bookModal\")'>+ Add Book</button></div>" +
-               "      <div class='card'><table id='bookTable'><thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Quantity</th></tr></thead><tbody></tbody></table></div>" +
+               "      <div class='card'><table id='bookTable'><thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Quantity</th><th>Actions</th></tr></thead><tbody></tbody></table></div>" +
                "    </div>" +
                "    <div id='members-section' class='section' style='display:none'>" +
                "      <div class='header'><h1>Members List</h1><button class='btn-primary' onclick='openModal(\"memberModal\")'>+ Add Member</button></div>" +
-               "      <div class='card'><table id='memberTable'><thead><tr><th>ID</th><th>Name</th><th>Phone</th></tr></thead><tbody></tbody></table></div>" +
+               "      <div class='card'><table id='memberTable'><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Actions</th></tr></thead><tbody></tbody></table></div>" +
                "    </div>" +
                "    <div id='issue-section' class='section' style='display:none'>" +
                "      <div class='header'><h1>Issue & Return</h1></div>" +
@@ -94,7 +95,8 @@ public class UIQueries {
                "</div>" +
                "<!-- Modals -->" +
                "<div id='bookModal' style='display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;'>" +
-               "  <div class='card' style='width:400px'><h2>Add Book</h2><br>" +
+               "  <div class='card' style='width:400px'><h2 id='bookModalTitle'>Add Book</h2><br>" +
+               "    <input type='hidden' id='bId'>" +
                "    <input type='text' id='bTitle' placeholder='Title' style='width:100%'><br>" +
                "    <input type='text' id='bAuthor' placeholder='Author' style='width:100%'><br>" +
                "    <input type='number' id='bQty' placeholder='Quantity' style='width:100%'><br><br>" +
@@ -102,13 +104,16 @@ public class UIQueries {
                "  </div>" +
                "</div>" +
                "<div id='memberModal' style='display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;'>" +
-               "  <div class='card' style='width:400px'><h2>Add Member</h2><br>" +
+               "  <div class='card' style='width:400px'><h2 id='memberModalTitle'>Add Member</h2><br>" +
+               "    <input type='hidden' id='mId'>" +
                "    <input type='text' id='mName' placeholder='Name' style='width:100%'><br>" +
                "    <input type='text' id='mPhone' placeholder='Phone' style='width:100%'><br><br>" +
                "    <button class='btn-primary' onclick='saveMember()'>Save</button> <button onclick='closeModal(\"memberModal\")'>Cancel</button>" +
                "  </div>" +
                "</div>" +
                "<script>" +
+               "  let currentBooks = [];" +
+               "  let currentMembers = [];" +
                "  function showSection(id) {" +
                "    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');" +
                "    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));" +
@@ -117,16 +122,52 @@ public class UIQueries {
                "    if(id === 'books') loadBooks();" +
                "    if(id === 'members') loadMembers();" +
                "  }" +
-               "  function openModal(id) { document.getElementById(id).style.display = 'flex'; }" +
+               "  function openModal(id, data = null) {" +
+               "    document.getElementById(id).style.display = 'flex';" +
+               "    if (id === 'bookModal') {" +
+               "      if (data) {" +
+               "        document.getElementById('bookModalTitle').innerText = 'Edit Book';" +
+               "        document.getElementById('bId').value = data.id;" +
+               "        document.getElementById('bTitle').value = data.title;" +
+               "        document.getElementById('bAuthor').value = data.author;" +
+               "        document.getElementById('bQty').value = data.quantity;" +
+               "      } else {" +
+               "        document.getElementById('bookModalTitle').innerText = 'Add Book';" +
+               "        document.getElementById('bId').value = '';" +
+               "        document.getElementById('bTitle').value = '';" +
+               "        document.getElementById('bAuthor').value = '';" +
+               "        document.getElementById('bQty').value = '';" +
+               "      }" +
+               "    } else if (id === 'memberModal') {" +
+               "      if (data) {" +
+               "        document.getElementById('memberModalTitle').innerText = 'Edit Member';" +
+               "        document.getElementById('mId').value = data.id;" +
+               "        document.getElementById('mName').value = data.name;" +
+               "        document.getElementById('mPhone').value = data.phone;" +
+               "      } else {" +
+               "        document.getElementById('memberModalTitle').innerText = 'Add Member';" +
+               "        document.getElementById('mId').value = '';" +
+               "        document.getElementById('mName').value = '';" +
+               "        document.getElementById('mPhone').value = '';" +
+               "      }" +
+               "    }" +
+               "  }" +
                "  function closeModal(id) { document.getElementById(id).style.display = 'none'; }" +
                "  function loadBooks() {" +
                "    fetch('/api/books').then(r => r.json()).then(data => {" +
+               "      currentBooks = data;" +
                "      const tbody = document.querySelector('#bookTable tbody');" +
-               "      tbody.innerHTML = data.map(b => `<tr><td>${b.id}</td><td>${b.title}</td><td>${b.author}</td><td>${b.quantity}</td></tr>`).join('');" +
+               "      tbody.innerHTML = data.map(b => `<tr><td>${b.id}</td><td>${b.title}</td><td>${b.author}</td><td>${b.quantity}</td><td><button class='btn-edit' onclick='editBook(${b.id})'>Edit</button></td></tr>`).join('');" +
                "    });" +
+               "  }" +
+               "  function editBook(id) {" +
+               "    const book = currentBooks.find(b => b.id === id);" +
+               "    if (book) openModal('bookModal', book);" +
                "  }" +
                "  function saveBook() {" +
                "    const params = new URLSearchParams();" +
+               "    const id = document.getElementById('bId').value;" +
+               "    if (id) params.append('id', id);" +
                "    params.append('title', document.getElementById('bTitle').value);" +
                "    params.append('author', document.getElementById('bAuthor').value);" +
                "    params.append('quantity', document.getElementById('bQty').value);" +
@@ -134,12 +175,19 @@ public class UIQueries {
                "  }" +
                "  function loadMembers() {" +
                "    fetch('/api/members').then(r => r.json()).then(data => {" +
+               "      currentMembers = data;" +
                "      const tbody = document.querySelector('#memberTable tbody');" +
-               "      tbody.innerHTML = data.map(m => `<tr><td>${m.id}</td><td>${m.name}</td><td>${m.phone}</td></tr>`).join('');" +
+               "      tbody.innerHTML = data.map(m => `<tr><td>${m.id}</td><td>${m.name}</td><td>${m.phone}</td><td><button class='btn-edit' onclick='editMember(${m.id})'>Edit</button></td></tr>`).join('');" +
                "    });" +
+               "  }" +
+               "  function editMember(id) {" +
+               "    const member = currentMembers.find(m => m.id === id);" +
+               "    if (member) openModal('memberModal', member);" +
                "  }" +
                "  function saveMember() {" +
                "    const params = new URLSearchParams();" +
+               "    const id = document.getElementById('mId').value;" +
+               "    if (id) params.append('id', id);" +
                "    params.append('name', document.getElementById('mName').value);" +
                "    params.append('phone', document.getElementById('mPhone').value);" +
                "    fetch('/api/members', {method:'POST', body: params}).then(() => { closeModal('memberModal'); loadMembers(); });" +
