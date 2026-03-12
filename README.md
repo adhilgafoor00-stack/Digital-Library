@@ -28,7 +28,7 @@ If you are starting fresh, open your terminal (Command Prompt or PowerShell) and
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git clone https://github.com/adhilgafoor00-stack/Digital-Library.git
 
 # 2. Enter the project directory
 cd "digital library"
