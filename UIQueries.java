@@ -38,7 +38,10 @@ public class UIQueries {
         "th { background: #f8f9fa; color: #777; font-weight: 600; text-transform: uppercase; font-size: 12px; }" +
         "input, select { padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin: 5px; }" +
         ".btn-primary { background: var(--accent); color: #fff; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }" +
-        ".btn-edit { background: #f39c12; color: #fff; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }";
+        ".btn-edit { background: #f39c12; color: #fff; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }" +
+        ".stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }" +
+        ".stat-card { padding: 20px; border-radius: 12px; color: #fff; text-align: center; }" +
+        ".stat-blue { background: #3498db; } .stat-green { background: #2ecc71; } .stat-orange { background: #e67e22; }";
 
     public static String getLoginPage() {
         return "<html><head><style>" + CSS + "</style></head><body>" +
@@ -68,7 +71,13 @@ public class UIQueries {
                "  <div class='main-content'>" +
                "    <div id='overview-section' class='section'>" +
                "      <div class='header'><h1>Dashboard Overview</h1></div>" +
-               "      <div class='card'><h3>Welcome, Admin!</h3><p>Manage your books and members with ease.</p></div>" +
+               "      <div class='stats-grid'>" +
+               "        <div class='stat-card stat-blue'><h3>Total Books</h3><h1 id='stat-books'>0</h1></div>" +
+               "        <div class='stat-card stat-green'><h3>Members</h3><h1 id='stat-members'>0</h1></div>" +
+               "        <div class='stat-card stat-orange'><h3>Issued</h3><h1 id='stat-issued'>0</h1></div>" +
+               "      </div>" +
+               "      <div class='header'><h2>Recent Activity (Issued Books)</h2></div>" +
+               "      <div class='card'><table id='activityTable'><thead><tr><th>Date</th><th>Book Title</th><th>Member Name</th><th>Member Phone</th></tr></thead><tbody></tbody></table></div>" +
                "    </div>" +
                "    <div id='books-section' class='section' style='display:none'>" +
                "      <div class='header'><h1>Books Inventory</h1><button class='btn-primary' onclick='openModal(\"bookModal\")'>+ Add Book</button></div>" +
@@ -114,13 +123,26 @@ public class UIQueries {
                "<script>" +
                "  let currentBooks = [];" +
                "  let currentMembers = [];" +
+               "  window.onload = () => showSection('overview');" +
                "  function showSection(id) {" +
                "    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');" +
                "    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));" +
                "    document.getElementById(id + '-section').style.display = 'block';" +
                "    document.getElementById('nav-' + id).classList.add('active');" +
+               "    if(id === 'overview') loadDashboard();" +
                "    if(id === 'books') loadBooks();" +
                "    if(id === 'members') loadMembers();" +
+               "  }" +
+               "  function loadDashboard() {" +
+               "    fetch('/api/stats').then(r => r.json()).then(data => {" +
+               "      document.getElementById('stat-books').innerText = data.books || 0;" +
+               "      document.getElementById('stat-members').innerText = data.members || 0;" +
+               "      document.getElementById('stat-issued').innerText = data.issued || 0;" +
+               "    });" +
+               "    fetch('/api/issued-list').then(r => r.json()).then(data => {" +
+               "      const tbody = document.querySelector('#activityTable tbody');" +
+               "      tbody.innerHTML = data.map(i => `<tr><td>${i.date}</td><td>${i.book}</td><td>${i.member}</td><td>${i.phone}</td></tr>`).join('');" +
+               "    });" +
                "  }" +
                "  function openModal(id, data = null) {" +
                "    document.getElementById(id).style.display = 'flex';" +
@@ -165,13 +187,20 @@ public class UIQueries {
                "    if (book) openModal('bookModal', book);" +
                "  }" +
                "  function saveBook() {" +
+               "    const title = document.getElementById('bTitle').value.trim();" +
+               "    const author = document.getElementById('bAuthor').value.trim();" +
+               "    const qty = document.getElementById('bQty').value;" +
+               "    if(!title || !author || qty === '') { alert('All fields are required'); return; }" +
+               "    if(parseInt(qty) < 0) { alert('Quantity cannot be negative'); return; }" +
                "    const params = new URLSearchParams();" +
                "    const id = document.getElementById('bId').value;" +
                "    if (id) params.append('id', id);" +
-               "    params.append('title', document.getElementById('bTitle').value);" +
-               "    params.append('author', document.getElementById('bAuthor').value);" +
-               "    params.append('quantity', document.getElementById('bQty').value);" +
-               "    fetch('/api/books', {method:'POST', body: params}).then(() => { closeModal('bookModal'); loadBooks(); });" +
+               "    params.append('title', title);" +
+               "    params.append('author', author);" +
+               "    params.append('quantity', qty);" +
+               "    fetch('/api/books', {method:'POST', body: params}).then(r => r.json()).then(data => {" +
+               "      if(data.error) alert(data.error); else { closeModal('bookModal'); loadBooks(); }" +
+               "    });" +
                "  }" +
                "  function loadMembers() {" +
                "    fetch('/api/members').then(r => r.json()).then(data => {" +
@@ -185,24 +214,41 @@ public class UIQueries {
                "    if (member) openModal('memberModal', member);" +
                "  }" +
                "  function saveMember() {" +
+               "    const name = document.getElementById('mName').value.trim();" +
+               "    const phone = document.getElementById('mPhone').value.trim();" +
+               "    if(!name || !phone) { alert('All fields are required'); return; }" +
                "    const params = new URLSearchParams();" +
                "    const id = document.getElementById('mId').value;" +
                "    if (id) params.append('id', id);" +
-               "    params.append('name', document.getElementById('mName').value);" +
-               "    params.append('phone', document.getElementById('mPhone').value);" +
-               "    fetch('/api/members', {method:'POST', body: params}).then(() => { closeModal('memberModal'); loadMembers(); });" +
+               "    params.append('name', name);" +
+               "    params.append('phone', phone);" +
+               "    fetch('/api/members', {method:'POST', body: params}).then(r => r.json()).then(data => {" +
+               "      if(data.error) alert(data.error); else { closeModal('memberModal'); loadMembers(); }" +
+               "    });" +
                "  }" +
                "  function issueBook() {" +
+               "    const bid = document.getElementById('issueBid').value;" +
+               "    const mid = document.getElementById('issueMid').value;" +
+               "    if(!bid || !mid) { alert('IDs are required'); return; }" +
                "    const params = new URLSearchParams();" +
-               "    params.append('bookId', document.getElementById('issueBid').value);" +
-               "    params.append('memberId', document.getElementById('issueMid').value);" +
-               "    fetch('/api/issue', {method:'POST', body: params}).then(r => r.text()).then(t => alert(t));" +
+               "    params.append('bookId', bid);" +
+               "    params.append('memberId', mid);" +
+               "    fetch('/api/issue', {method:'POST', body: params}).then(r => r.json()).then(data => {" +
+               "      alert(data.message || data.error);" +
+               "      if(data.message) { loadDashboard(); loadBooks(); }" +
+               "    });" +
                "  }" +
                "  function returnBook() {" +
+               "    const bid = document.getElementById('returnBid').value;" +
+               "    const mid = document.getElementById('returnMid').value;" +
+               "    if(!bid || !mid) { alert('IDs are required'); return; }" +
                "    const params = new URLSearchParams();" +
-               "    params.append('bookId', document.getElementById('returnBid').value);" +
-               "    params.append('memberId', document.getElementById('returnMid').value);" +
-               "    fetch('/api/return', {method:'POST', body: params}).then(r => r.text()).then(t => alert(t));" +
+               "    params.append('bookId', bid);" +
+               "    params.append('memberId', mid);" +
+               "    fetch('/api/return', {method:'POST', body: params}).then(r => r.json()).then(data => {" +
+               "      alert(data.message || data.error);" +
+               "      if(data.message) { loadDashboard(); loadBooks(); }" +
+               "    });" +
                "  }" +
                "</script></body></html>";
     }
